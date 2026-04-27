@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Context } from "../lib/context.js";
 import type { BRollClip, Platform } from "../types.js";
 import { PLATFORM_DIMENSIONS } from "../types.js";
+import { concatSlots, type FfmpegSettings } from "../lib/ffmpeg.js";
+import { logger } from "../logger.js";
 
 const ImageSourceSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("scene"), id: z.string() }),
@@ -105,24 +107,46 @@ export function registerAnimateTools(server: McpServer, ctx: Context): void {
         return { content: [{ type: "text", text: `Configured animate provider "${provider.kind}" does not support extension.` }], isError: true };
       }
       const prompt = args.prompt ?? source.veoPrompt;
+      const id = `broll_veo_ext_${randomUUID().slice(0, 8)}`;
+
+      // Veo's extend API returns each continuation as its own ~8s segment, NOT the
+      // cumulative video. We must persist every segment (seed first) and concat them
+      // ourselves. Keeping only the last segment was the original bug — it produced
+      // a clip the same length as the seed but with a different 8 seconds of motion.
+      const seedLocal = await ctx.storage.resolveLocalPath(source.url);
+      const segDir = `broll/ext_${id}`;
+      const segPaths: string[] = [seedLocal];
 
       let currentRef: unknown = source.veoRef;
       let lastResult: { videoBytes: Buffer; videoRef?: unknown; model?: string } | undefined;
       for (let i = 1; i <= args.extensions; i++) {
+        logger.info(`extend_video ${id}: extension ${i}/${args.extensions}`);
         const r = await provider.extendVideo({ previousVideoRef: currentRef, prompt });
         currentRef = r.videoRef;
         lastResult = r;
+        const segRel = `${segDir}/seg_${String(i).padStart(2, "0")}.mp4`;
+        const segLocal = await ctx.storage.localPathFor(segRel);
+        writeFileSync(segLocal, r.videoBytes);
+        segPaths.push(segLocal);
       }
       if (!lastResult) {
         return { content: [{ type: "text", text: `Extension loop produced no result.` }], isError: true };
       }
 
-      const id = `broll_veo_ext_${randomUUID().slice(0, 8)}`;
-      const written = await ctx.storage.writeBlob(`broll/${id}.mp4`, lastResult.videoBytes);
+      // Concat seed + all extension segments into one continuous clip.
+      const finalRel = `broll/${id}.mp4`;
+      const finalLocal = await ctx.storage.localPathFor(finalRel);
+      logger.info(`extend_video ${id}: concatenating ${segPaths.length} segments (1 seed + ${args.extensions} extensions)`);
+      await concatSlots({
+        slotPaths: segPaths,
+        outputPath: finalLocal,
+        settings: ctx.config.ffmpeg as FfmpegSettings,
+      });
+
       const description = args.description ?? `${source.description} — extended ${args.extensions}x`;
       const clip: BRollClip = {
         id,
-        url: written.url,
+        url: finalRel,
         filename: `${id}.mp4`,
         platform: source.platform,
         durationSec: 0, // unknown until we probe; user can override
@@ -137,12 +161,13 @@ export function registerAnimateTools(server: McpServer, ctx: Context): void {
       };
       await ctx.index.putBRoll(clip);
 
-      const uri = await ctx.storage.resolveUri(written.url);
+      const uri = await ctx.storage.resolveUri(finalRel);
       return {
         content: [
           { type: "text", text:
             `clipId: ${id}\n` +
             `extended ${args.extensions}x from ${source.id} (parent ${source.platform})\n` +
+            `concatenated ${segPaths.length} segments (1 seed + ${args.extensions} extensions ≈ ${(segPaths.length * 8)}s)\n` +
             `${description}\n` +
             `uri: ${uri}\n` +
             `extendable: yes (chain further with extend_video brollId="${id}")\n\n` +
