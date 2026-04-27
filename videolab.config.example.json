@@ -1,0 +1,39 @@
+{
+  "storage": {
+    "kind": "local",
+    "root": "./media"
+  },
+  "index": {
+    "kind": "json",
+    "path": "./media/index.json"
+  },
+  "providers": {
+    "musicGen": "elevenlabs",
+    "tts": "elevenlabs",
+    "llm": "anthropic",
+    "animate": "veo",
+    "talkingHead": "fal-omnihuman",
+    "imageGen": "gemini-nano-banana",
+    "sceneAssets": "json-manifest",
+    "musicLibrary": "local",
+    "brollLibrary": "local"
+  },
+  "ffmpeg": {
+    "binary": "ffmpeg",
+    "videoCodec": "libx264",
+    "preset": "fast",
+    "crf": 23,
+    "audioCodec": "aac",
+    "audioBitrate": "128k"
+  },
+  "defaults": {
+    "platform": "mobile",
+    "voiceId": "4YYIPFl9wE5c4L2eu2Gb",
+    "ttsModel": "eleven_multilingual_v2",
+    "musicBedVolume": 0.18,
+    "voiceoverVolume": 1.0
+  },
+  "sceneAssets": {
+    "manifestPath": "./media/scene-manifest.json"
+  }
+}
