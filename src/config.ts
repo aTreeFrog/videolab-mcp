@@ -47,13 +47,10 @@ const FfmpegSchema = z.object({
 
 const DefaultsSchema = z.object({
   platform: z.enum(["mobile", "desktop"]).default("mobile"),
-  voiceId: z.string().default("4YYIPFl9wE5c4L2eu2Gb"),
+  voiceId: z.string().min(1, "defaults.voiceId is required — pick a voice from list_voices and set it in your config"),
   ttsModel: z.string().default("eleven_multilingual_v2"),
   musicBedVolume: z.number().min(0).max(1).default(0.18),
   voiceoverVolume: z.number().min(0).max(1).default(1.0),
-}).default({
-  platform: "mobile", voiceId: "4YYIPFl9wE5c4L2eu2Gb", ttsModel: "eleven_multilingual_v2",
-  musicBedVolume: 0.18, voiceoverVolume: 1.0,
 });
 
 const SceneAssetsSchema = z.object({

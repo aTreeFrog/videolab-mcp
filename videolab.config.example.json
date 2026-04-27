@@ -28,7 +28,7 @@
   },
   "defaults": {
     "platform": "mobile",
-    "voiceId": "4YYIPFl9wE5c4L2eu2Gb",
+    "voiceId": "REPLACE_ME — pick a voice id from list_voices (or the ElevenLabs dashboard)",
     "ttsModel": "eleven_multilingual_v2",
     "musicBedVolume": 0.18,
     "voiceoverVolume": 1.0

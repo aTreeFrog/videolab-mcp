@@ -82,6 +82,8 @@ FAL_KEY=
 
 `videolab.config.json` for everything else (storage, providers, FFmpeg flags, defaults). The example file is sensible and zero-dependency: local storage, JSON index, ElevenLabs/Anthropic/Veo/Fal providers, mobile (9:16) defaults.
 
+**One required setting:** `defaults.voiceId` — your ElevenLabs voice id. Run `list_voices` once the server is up (or grab the id from the ElevenLabs dashboard) and paste it into your config. Validation will fail until this is set.
+
 ## Walkthrough — make a promo from scratch
 
 In Claude Desktop, with the MCP server connected:
