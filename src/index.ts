@@ -28,6 +28,7 @@ import { registerImageTools } from "./tools/images.js";
 import { registerDocumentaryTools } from "./tools/documentary.js";
 import { registerTreeFrogSaveTools } from "./tools/treefrog-save.js";
 import { registerTreeFrogQueryTools } from "./tools/treefrog-query.js";
+import { registerMotionGraphicsTools } from "./tools/motion-graphics.js";
 import { registerLibraryResources } from "./resources/library.js";
 import { registerPrompts } from "./prompts/index.js";
 
@@ -53,6 +54,7 @@ async function main() {
   registerDocumentaryTools(server, ctx);
   registerTreeFrogSaveTools(server, ctx);
   registerTreeFrogQueryTools(server, ctx);
+  registerMotionGraphicsTools(server, ctx);
   registerLibraryResources(server, ctx);
   registerPrompts(server, ctx);
 

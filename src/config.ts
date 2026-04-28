@@ -57,6 +57,10 @@ const SceneAssetsSchema = z.object({
   manifestPath: z.string().optional(),
 }).default({});
 
+const MotionGraphicsSchema = z.object({
+  projectPath: z.string().describe("Absolute path to the Remotion project root (the directory with package.json + src/index.ts that calls registerRoot). Required for render_motion_graphic."),
+}).optional();
+
 const ConfigSchema = z.object({
   storage: StorageSchema,
   index: IndexSchema,
@@ -69,6 +73,7 @@ const ConfigSchema = z.object({
   defaults: DefaultsSchema,
   sceneAssets: SceneAssetsSchema,
   treefrog: TreeFrogSchema,
+  motionGraphics: MotionGraphicsSchema,
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
