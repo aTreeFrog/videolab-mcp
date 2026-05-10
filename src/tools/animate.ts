@@ -15,6 +15,11 @@ const ImageSourceSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("url"), url: z.string() }),
 ]);
 
+const ReferenceImageSchema = z.object({
+  imageSource: ImageSourceSchema.describe("Reference image source. Uses the same source kinds as imageSource."),
+  referenceType: z.string().optional().describe("Reference role for Veo. Default 'asset'."),
+});
+
 export function registerAnimateTools(server: McpServer, ctx: Context): void {
   server.registerTool(
     "animate_image_to_video",
@@ -22,6 +27,7 @@ export function registerAnimateTools(server: McpServer, ctx: Context): void {
       description: "Animate a still image into a short video via the configured animation provider (Veo). Saves the result as a b-roll clip so it can be dropped into any timeline slot via { kind: 'broll', id: <newClipId> }. Async — typically takes 30-90 seconds.",
       inputSchema: {
         imageSource: ImageSourceSchema.describe("Where the input image comes from. scene = scene asset, broll = first-frame thumbnail, image = generated image from generate_image, url = file:// or local path."),
+        referenceImages: z.array(ReferenceImageSchema).optional().describe("Optional extra visual references to guide subject/style/asset consistency. Each entry resolves to bytes and is sent to Veo as config.referenceImages."),
         prompt: z.string().optional().describe("Cinematic motion description. e.g. 'slow zoom in, embers drifting, wind in cloak'. Defaults to subtle ambient motion."),
         durationSeconds: z.number().int().min(2).max(8).optional().describe("Output duration. Default 6. Veo 3 supports 4/6/8."),
         platform: z.enum(["mobile", "desktop"]).optional().describe("Determines aspect ratio (mobile=9:16, desktop=16:9). Defaults to config.defaults.platform."),
@@ -35,6 +41,16 @@ export function registerAnimateTools(server: McpServer, ctx: Context): void {
       const dims = PLATFORM_DIMENSIONS[platform];
 
       const { imageBytes, imageMimeType, sourceLabel } = await loadImageBytes(ctx, args.imageSource);
+      const referenceImages = args.referenceImages
+        ? await Promise.all(args.referenceImages.map(async (ref) => {
+            const resolved = await loadImageBytes(ctx, ref.imageSource);
+            return {
+              imageBytes: resolved.imageBytes,
+              imageMimeType: resolved.imageMimeType,
+              referenceType: ref.referenceType ?? "asset",
+            };
+          }))
+        : undefined;
 
       const result = await ctx.animate().imageToVideo({
         imageBytes,
@@ -42,6 +58,7 @@ export function registerAnimateTools(server: McpServer, ctx: Context): void {
         prompt: args.prompt,
         durationSeconds: args.durationSeconds,
         aspectRatio: aspect,
+        referenceImages,
       });
 
       const id = `broll_veo_${randomUUID().slice(0, 8)}`;
@@ -68,6 +85,7 @@ export function registerAnimateTools(server: McpServer, ctx: Context): void {
           { type: "text", text:
             `clipId: ${id}\n` +
             `${platform} (${dims.width}x${dims.height}) | ${clip.durationSec}s | source: ${sourceLabel}\n` +
+            `references: ${referenceImages?.length ?? 0}\n` +
             `${clip.description}\n` +
             `uri: ${uri}\n` +
             (extendable ? `extendable: yes (call extend_video with brollId="${id}")\n` : `extendable: no (${platform === "mobile" ? "9:16 not supported by Veo extend API" : "no videoRef captured"})\n`) +

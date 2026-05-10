@@ -92,12 +92,19 @@ export interface AnimateProvider {
   extendVideo?(req: ExtendVideoRequest): Promise<AnimateResult>;
 }
 
+export type AnimateReferenceImage = {
+  imageBytes: Buffer;
+  imageMimeType: string;
+  referenceType?: string;
+};
+
 export type AnimateRequest = {
   imageBytes: Buffer;
   imageMimeType: string;
   prompt?: string;
   durationSeconds?: number;
   aspectRatio?: "9:16" | "16:9" | "1:1";
+  referenceImages?: AnimateReferenceImage[];
 };
 
 export type ExtendVideoRequest = {
