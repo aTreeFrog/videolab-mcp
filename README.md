@@ -140,12 +140,53 @@ Claude:
       prompt: "slow camera push-in, dust particles drifting"
     })
      → clipId: broll_veo_a8b
+
+User: Keep the same heroine/outfit/accessories from these reference stills.
+
+Claude:
+  → animate_image_to_video({
+      imageSource: { kind: "image", id: "img_base_heroine" },
+      referenceImages: [
+        { imageSource: { kind: "image", id: "img_ref_dress" }, referenceType: "asset" },
+        { imageSource: { kind: "image", id: "img_ref_glasses" }, referenceType: "asset" },
+        { imageSource: { kind: "image", id: "img_ref_face" }, referenceType: "asset" }
+      ],
+      prompt: "medium eye-level shot, serene runway walk through shallow turquoise lagoon, dreamlike cinematic pullback",
+      platform: "mobile",
+      durationSeconds: 6
+    })
+     → clipId: broll_veo_ref_92c
+
   → swap_clip({
       renderId: "render_d11",
       slotIndex: 2,
-      newSource: { kind: "broll", id: "broll_veo_a8b" }
+      newSource: { kind: "broll", id: "broll_veo_ref_92c" }
     })
      → renderId: render_2f9 (rev of render_d11)
+```
+
+### `animate_image_to_video` input shape
+
+`imageSource` supports:
+
+- `{ kind: "scene", id: "<scene-asset-id>" }`
+- `{ kind: "image", id: "<generated-image-id>" }`
+- `{ kind: "broll", id: "<broll-id>" }` (uses first frame when available)
+- `{ kind: "url", url: "file://... or local/relative path" }`
+
+Optional `referenceImages` supports the same source kinds:
+
+```json
+{
+  "imageSource": { "kind": "image", "id": "img_base" },
+  "referenceImages": [
+    { "imageSource": { "kind": "image", "id": "img_ref_1" }, "referenceType": "asset" },
+    { "imageSource": { "kind": "scene", "id": "asset-character" }, "referenceType": "asset" }
+  ],
+  "prompt": "cinematic motion prompt",
+  "platform": "mobile",
+  "durationSeconds": 6
+}
 ```
 
 ## The iteration loop

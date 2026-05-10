@@ -29,8 +29,15 @@ export class VeoAnimateProvider implements AnimateProvider {
 
   async imageToVideo(req: AnimateRequest): Promise<AnimateResult> {
     const aspect = req.aspectRatio ?? "9:16";
-    logger.info(`veo: imageToVideo (model=${this.model}, aspect=${aspect})`);
-    const operation = await withRetry(() => this.client().models.generateVideos({
+    const referenceImages = (req.referenceImages ?? []).map((ref) => ({
+      image: {
+        imageBytes: ref.imageBytes.toString("base64"),
+        mimeType: ref.imageMimeType,
+      },
+      referenceType: ref.referenceType ?? "asset",
+    }));
+    logger.info(`veo: imageToVideo (model=${this.model}, aspect=${aspect}, refs=${referenceImages.length})`);
+    const payload: any = {
       model: this.model,
       prompt: req.prompt ?? DEFAULT_PROMPT,
       image: {
@@ -40,8 +47,10 @@ export class VeoAnimateProvider implements AnimateProvider {
       config: {
         numberOfVideos: 1,
         aspectRatio: aspect,
+        ...(referenceImages.length > 0 ? { referenceImages } : {}),
       },
-    }), "veo generateVideos");
+    };
+    const operation = await withRetry(() => this.client().models.generateVideos(payload), "veo generateVideos");
     const generated = await this.pollUntilDone(operation, "imageToVideo");
     const videoBytes = await this.downloadVideo(generated);
     return {
